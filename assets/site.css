@@ -12,7 +12,7 @@
   --ok:#1f6e44; --ok-hover:#185a37; --err:#a6402a;
   --display:"Marcellus","Cormorant Garamond",Georgia,serif;
   --text:"Jost",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --wrap:1160px; --gut:24px; --head:78px;
+  --wrap:1160px; --gut:24px; --head:78px; --shadow:rgba(60,34,22,.55);
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
@@ -20,7 +20,7 @@
     --bg:#1a1411; --bg-alt:#211915; --surface:#241b17;
     --ink:#efe7dd; --ink-2:#b8a99b; --line:#3a2d27; --line-strong:#d9c9b8;
     --accent:#d59a78; --accent-hover:#e6b293; --accent-ink:#1a1411; --accent-soft:#2c211c;
-    --deep:#120d0b; --err:#ef9a82; --ok:#2a8152; --ok-hover:#25784b;
+    --deep:#120d0b; --shadow:rgba(0,0,0,.85); --err:#ef9a82; --ok:#2a8152; --ok-hover:#25784b;
     color-scheme:dark;
   }
 }
@@ -28,7 +28,7 @@
   --bg:#1a1411; --bg-alt:#211915; --surface:#241b17;
   --ink:#efe7dd; --ink-2:#b8a99b; --line:#3a2d27; --line-strong:#d9c9b8;
   --accent:#d59a78; --accent-hover:#e6b293; --accent-ink:#1a1411; --accent-soft:#2c211c;
-  --deep:#120d0b; --err:#ef9a82; --ok:#2a8152; --ok-hover:#25784b;
+  --deep:#120d0b; --shadow:rgba(0,0,0,.85); --err:#ef9a82; --ok:#2a8152; --ok-hover:#25784b;
   color-scheme:dark;
 }
 
@@ -63,12 +63,11 @@ p{text-wrap:pretty}
 .btn-wa{background:var(--ok);color:#fff}
 .btn-wa:hover{background:var(--ok-hover)}
 .tlink{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:500;color:var(--accent);text-decoration:none}
-.tlink:hover{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
 .tlink .arr{transition:transform .2s}
 .tlink:hover .arr{transform:translateX(3px)}
 
 /* cabeçalho */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .3s}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--bg);border-bottom:1px solid transparent}
 .top.scrolled{border-bottom-color:var(--line)}
 .top .wrap{display:flex;align-items:center;gap:28px;height:var(--head)}
 .brand{display:flex;align-items:center;min-height:48px;flex:0 1 auto;min-width:0;margin-right:auto}
@@ -84,7 +83,6 @@ p{text-wrap:pretty}
 .nav{display:flex;align-items:center;gap:28px}
 .nav>a,.nav .dd>a{font-size:.95rem;text-decoration:none;color:var(--ink-2);padding:12px 0;position:relative}
 .nav>a:hover,.nav .dd>a:hover,.nav a[aria-current="page"]{color:var(--ink)}
-.nav>a[aria-current="page"]::after,.nav .dd>a[aria-current="page"]::after{content:"";position:absolute;left:0;right:0;bottom:6px;height:1px;background:var(--accent)}
 .nav .btn{color:var(--ink);min-height:42px;padding:0 18px}
 .dd{position:relative;display:flex;align-items:center;gap:2px}
 .dd-btn{width:28px;height:36px;display:grid;place-items:center;color:var(--ink-2)}
@@ -313,6 +311,169 @@ footer :focus-visible{outline-color:var(--deep-accent)}
   :root{--wrap:1480px;--head:88px}
   .logo{width:236px}
   .hero-in{min-height:min(calc(100svh - var(--head)),940px)}
+}
+
+/* ===== movimento =====
+   Lento e preciso, sem quiques: entradas por baixo, linhas que se desenham,
+   fotos que se revelam como uma página virando. Só transform/opacity/clip-path.
+   O estado escondido só existe com JS (.js) e some em prefers-reduced-motion. */
+:root{--ease:cubic-bezier(.2,.7,.2,1);--ease-io:cubic-bezier(.65,0,.35,1)}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rise-sm{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes word{from{transform:translateY(110%)}to{transform:none}}
+@keyframes wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
+@keyframes settle{from{scale:1.12}to{scale:1}}
+@keyframes drift{to{translate:0 6%}}
+@keyframes drift-in{from{translate:0 -6%}to{translate:0 0}}
+@keyframes progress{to{scale:1 1}}
+@keyframes fade-down{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes pop{40%{transform:scale(1.08)}}
+@keyframes vt-out{to{opacity:0}}
+@keyframes vt-in{from{opacity:0;transform:translateY(10px)}}
+
+/* abertura da página inicial: texto sobe em sequência, título palavra por palavra, foto se abre */
+.js .hero-text>*{animation:rise .9s var(--ease) both}
+.js .hero-text>:nth-child(1){animation-delay:.1s}
+.js .hero-text>:nth-child(2){animation-delay:.2s}
+.js .hero-text>:nth-child(3){animation-delay:.55s}
+.js .hero-text>:nth-child(4){animation-delay:.7s}
+.js .hero-text>:nth-child(5){animation-delay:.85s}
+.hero-photo{overflow:hidden}
+.js .hero-photo img{animation:wipe 1.3s var(--ease-io) .15s both,settle 2.4s var(--ease) .15s both}
+
+/* cabeçalho das páginas internas */
+.js .phead .wrap>*{animation:rise .8s var(--ease) both}
+.js .phead .wrap>:nth-child(1){animation-delay:.05s}
+.js .phead .wrap>:nth-child(2){animation-delay:.15s}
+.js .phead .wrap>:nth-child(3){animation-delay:.25s}
+.js .phead .wrap>:nth-child(4){animation-delay:.45s}
+
+/* título dividido em palavras pelo site.js */
+.js h1.split{animation:none}
+h1.split .w{display:inline-block;overflow:clip;padding-block:.06em .12em;margin-block:-.06em -.12em;vertical-align:top}
+h1.split .w>span{display:inline-block;animation:word .9s var(--ease) both;animation-delay:var(--d)}
+
+/* revelar ao rolar (marcado pelo site.js) */
+.js [data-reveal="up"]{opacity:0;transform:translateY(22px);transition:opacity .9s var(--ease),transform .9s var(--ease);transition-delay:var(--d,0s)}
+.js [data-reveal="up"].in{opacity:1;transform:none}
+/* fotos: cortina de baixo para cima + leve aproximação */
+.js [data-reveal="img"] img{clip-path:inset(0 0 100% 0);scale:1.08;transition:clip-path 1.2s var(--ease-io),scale 1.8s var(--ease),transform 1.4s var(--ease)}
+.js [data-reveal="img"].in img{clip-path:inset(0);scale:1}
+/* réguas que se desenham da esquerda para a direita */
+.alist,.steps{--rule:var(--line-strong)}
+.js [data-reveal="line"]{position:relative;border-top-color:transparent!important}
+.js [data-reveal="line"]::before{content:"";position:absolute;top:-1px;left:0;right:0;height:1px;background:var(--rule,var(--line));transform:scaleX(0);transform-origin:left;transition:transform 1.2s var(--ease-io)}
+.js [data-reveal="line"].in::before{transform:none}
+/* citação: o fio lateral cresce antes do texto */
+.js [data-reveal="quote"]{position:relative;border-left-color:transparent;opacity:0;transform:translateX(-10px);transition:opacity .9s var(--ease) .25s,transform .9s var(--ease) .25s}
+.js [data-reveal="quote"]::before{content:"";position:absolute;left:-2px;top:0;bottom:0;width:2px;background:var(--accent);transform:scaleY(0);transform-origin:top;transition:transform .9s var(--ease-io)}
+.js [data-reveal="quote"].in{opacity:1;transform:none}
+.js [data-reveal="quote"].in::before{transform:none}
+
+/* cabeçalho: logo reduz um pouco e ganha sombra ao rolar; barra de leitura no topo */
+.top{transition:border-color .3s,box-shadow .3s}
+.top.scrolled{box-shadow:0 12px 28px -26px var(--shadow)}
+.top .logo{transform-origin:left center;transition:transform .45s var(--ease)}
+.top.scrolled .logo{transform:scale(.9)}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);transform-origin:0 50%;scale:0 1;pointer-events:none}
+@supports (animation-timeline:scroll()){
+  .top::after{animation:progress linear both;animation-timeline:scroll(root)}
+  /* foto da abertura e das áreas: leve paralaxe */
+  .hero-photo img{top:-6%;height:112%}
+  .js .hero-photo img{animation:wipe 1.3s var(--ease-io) .15s both,settle 2.4s var(--ease) .15s both,drift linear both;animation-timeline:auto,auto,scroll(root);animation-range:normal,normal,0 100vh}
+  .area-photo{aspect-ratio:2/1}
+  .area-photo img{height:112%;aspect-ratio:auto;animation:drift-in linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
+}
+
+/* menu: sublinhado que cresce no passar do mouse */
+.nav>a:not(.btn)::after,.nav .dd>a::after{content:"";position:absolute;left:0;right:0;bottom:6px;height:1px;background:var(--accent);transform:scaleX(0);transform-origin:right;transition:transform .35s var(--ease)}
+.nav>a:not(.btn):hover::after,.nav .dd>a:hover::after{transform:scaleX(1);transform-origin:left}
+.nav>a[aria-current="page"]::after,.nav .dd>a[aria-current="page"]::after{transform:scaleX(1)}
+.dd.open .dd-panel a{animation:rise-sm .35s var(--ease) both}
+.dd.open .dd-panel a:nth-child(2){animation-delay:.03s}
+.dd.open .dd-panel a:nth-child(3){animation-delay:.06s}
+.dd.open .dd-panel a:nth-child(4){animation-delay:.09s}
+.dd.open .dd-panel a:nth-child(5){animation-delay:.12s}
+.dd.open .dd-panel a:nth-child(6){animation-delay:.15s}
+.dd.open .dd-panel a:nth-child(7){animation-delay:.18s}
+/* menu do celular: itens entram em cascata */
+.menu-open .mnav>*{animation:rise .5s var(--ease) both}
+.menu-open .mnav>:nth-child(2){animation-delay:.04s}
+.menu-open .mnav>:nth-child(3){animation-delay:.08s}
+.menu-open .mnav>:nth-child(4){animation-delay:.12s}
+.menu-open .mnav>:nth-child(5){animation-delay:.16s}
+.menu-open .mnav>:nth-child(6){animation-delay:.2s}
+
+/* links de texto: traço que se desenha */
+.tlink{background:linear-gradient(currentColor,currentColor) 0 calc(50% + .8em)/0 1px no-repeat;transition:background-size .4s var(--ease)}
+.tlink:hover{background-size:100% 1px}
+.tlink .arr{transition:transform .35s var(--ease)}
+
+/* botões: elevação discreta */
+.btn{transition:background-color .2s,color .2s,border-color .2s,transform .3s var(--ease),box-shadow .3s var(--ease)}
+.btn-primary:hover,.btn-wa:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px var(--shadow)}
+.btn:active{transform:translateY(0);transition-duration:.08s}
+.btn svg{transition:transform .35s var(--ease)}
+.btn:hover svg{transform:scale(1.12) rotate(-6deg)}
+
+/* lista de áreas: fio de destaque corre sob a linha e o título avança */
+.alist li{position:relative}
+.alist li::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease-io)}
+.alist li:hover::after,.alist li:focus-within::after{transform:scaleX(1)}
+.alist h2,.alist h3{transition:color .25s,transform .45s var(--ease)}
+.alist a:hover h2,.alist a:hover h3{transform:translateX(8px)}
+
+/* fotos: aproximação lenta no passar do mouse */
+.portrait,.area-photo,.cinfo figure{overflow:hidden}
+.portrait img,.cinfo figure img{transition:transform 1.4s var(--ease)}
+.portrait:hover img,.cinfo figure:hover img{transform:scale(1.035)}
+
+/* listas com traço: o traço se estende no passar do mouse */
+.list li::before{transition:width .35s var(--ease)}
+.list li:hover::before{width:14px}
+
+/* próxima/anterior e navegação lateral */
+.pager a span,.side-nav a{transition:color .2s,transform .35s var(--ease)}
+.pager a.next:hover span{transform:translateX(4px)}
+.pager a:not(.next):hover span{transform:translateX(-4px)}
+.side-nav a{display:block}
+.side-nav a:hover{transform:translateX(4px)}
+
+/* perguntas: abertura suave */
+.faq{interpolate-size:allow-keywords}
+.faq details[open]>p{animation:fade-down .45s var(--ease)}
+@supports selector(::details-content){
+  .faq details::details-content{block-size:0;overflow:clip;transition:block-size .45s var(--ease),content-visibility .45s allow-discrete}
+  .faq details[open]::details-content{block-size:auto}
+}
+.faq summary{transition:color .2s,padding-left .35s var(--ease)}
+.faq summary:hover{padding-left:6px}
+
+/* etapas: rótulo se abre no passar do mouse */
+.steps li::before{transition:letter-spacing .4s var(--ease)}
+.steps li:hover::before{letter-spacing:.22em}
+
+/* botão copiar */
+.copy.done{animation:pop .4s var(--ease)}
+
+/* troca de tema: círculo que se expande a partir do botão (site.js) */
+.vt-theme::view-transition-old(root),.vt-theme::view-transition-new(root){animation:none;mix-blend-mode:normal}
+.vt-theme .top{view-transition-name:none}
+#theme svg{transition:transform .6s var(--ease)}
+#theme:hover svg{transform:rotate(-25deg)}
+
+/* troca de página: transição suave entre páginas (navegadores compatíveis) */
+@media (prefers-reduced-motion:no-preference){
+  @view-transition{navigation:auto}
+  .top{view-transition-name:site-header}
+  ::view-transition-old(root){animation:.25s var(--ease) both vt-out}
+  ::view-transition-new(root){animation:.45s var(--ease) both vt-in}
+}
+
+@media print{
+  .js [data-reveal]{opacity:1!important;transform:none!important}
+  .js [data-reveal] img{clip-path:none!important;scale:1!important}
+  .top::after{display:none}
 }
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}

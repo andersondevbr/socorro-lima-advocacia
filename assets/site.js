@@ -12,11 +12,25 @@
   }
   syncThemeColor();
   var themeBtn = document.getElementById('theme');
-  if (themeBtn) themeBtn.addEventListener('click', function () {
-    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-    root.dataset.theme = dark ? 'light' : 'dark';
-    try { localStorage.setItem('sl-theme', root.dataset.theme); } catch (e) {}
-    syncThemeColor();
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (themeBtn) themeBtn.addEventListener('click', function (ev) {
+    function apply() {
+      var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme = dark ? 'light' : 'dark';
+      try { localStorage.setItem('sl-theme', root.dataset.theme); } catch (e) {}
+      syncThemeColor();
+    }
+    if (reduce || !document.startViewTransition) { apply(); return; }
+    // novo tema se abre em círculo a partir do botão
+    var r = themeBtn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    var end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    root.classList.add('vt-theme');
+    var vt = document.startViewTransition(apply);
+    vt.ready.then(function () {
+      root.animate({ clipPath: ['circle(0 at ' + x + 'px ' + y + 'px)', 'circle(' + end + 'px at ' + x + 'px ' + y + 'px)'] },
+        { duration: 650, easing: 'cubic-bezier(.65,0,.35,1)', pseudoElement: '::view-transition-new(root)' });
+    }).catch(function () {});
+    vt.finished.then(function () { root.classList.remove('vt-theme'); }, function () { root.classList.remove('vt-theme'); });
   });
 
   // borda do cabeçalho ao rolar
@@ -58,7 +72,11 @@
   document.querySelectorAll('[data-copy]').forEach(function (b) {
     b.addEventListener('click', function () {
       var txt = b.getAttribute('data-copy'), old = b.textContent;
-      function done(ok) { b.textContent = ok ? 'Copiado' : 'Selecione e copie'; setTimeout(function () { b.textContent = old; }, 1800); }
+      function done(ok) {
+        b.textContent = ok ? 'Copiado' : 'Selecione e copie';
+        b.classList.remove('done'); void b.offsetWidth; b.classList.add('done');
+        setTimeout(function () { b.textContent = old; b.classList.remove('done'); }, 1800);
+      }
       try { navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { done(false); }); } catch (e) { done(false); }
     });
   });
@@ -120,6 +138,84 @@
     body.appendChild(bar); body.classList.add('has-wa');
     var onBar = function () { bar.classList.toggle('show', window.scrollY > 420); };
     onBar(); addEventListener('scroll', onBar, { passive: true });
+  }
+
+  // ===== movimento (desligado para quem pede menos movimento no sistema) =====
+  if (!reduce) {
+    // títulos principais entram palavra por palavra
+    document.querySelectorAll('.hero h1, .phead h1').forEach(function (h) {
+      if (h.children.length) return;
+      var base = h.closest('.hero') ? .22 : .27;
+      var words = h.textContent.trim().split(/\s+/);
+      h.setAttribute('aria-label', h.textContent.trim());
+      h.innerHTML = words.map(function (w, i) {
+        return '<span class="w" aria-hidden="true"><span style="--d:' + (base + i * .045).toFixed(3) + 's">' + w.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span></span>';
+      }).join(' ');
+      h.classList.add('split');
+    });
+
+    // revelar ao rolar: primeiro os itens internos, depois os blocos que não contêm itens já marcados
+    var groups = [
+      ['.alist > li, .defs > div, .prose > p, .steps > li, .faq details, .list > li, .side-nav li, footer .cols > div, .pager > a, .chips', 'up', true],
+      ['.portrait, .area-photo, .cinfo figure', 'img'],
+      ['.quote', 'quote'],
+      ['.alist, .defs, .steps', 'line'],
+      ['.shead > *, .others, .duo > div > *, .cta .wrap > *, .two > div > h2, .area-main > section > h2, .box, .side-nav .label, .faq-group > h2, .form, .cinfo .note, .map, .sec .wrap > p, .legal', 'up', true]
+    ];
+    var marked = [];
+    groups.forEach(function (g) {
+      document.querySelectorAll(g[0]).forEach(function (el) {
+        if (el.hasAttribute('data-reveal') || el.closest('.hero, .phead')) return;
+        if (g[1] === 'up') {
+          var p = el.parentElement.closest('[data-reveal="up"],[data-reveal="quote"]');
+          if (p || el.querySelector('[data-reveal="up"],[data-reveal="quote"]')) return;
+        }
+        el.setAttribute('data-reveal', g[1]);
+        if (g[2]) { // cascata entre irmãos (no máximo 6 passos)
+          var i = Array.prototype.indexOf.call(el.parentElement.children, el);
+          el.style.setProperty('--d', (Math.min(i, 6) * .07).toFixed(2) + 's');
+        }
+        marked.push(el);
+      });
+    });
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          e.target.classList.add('in'); io.unobserve(e.target);
+          // depois de entrar, o atraso não deve afetar outras transições do elemento
+          setTimeout(function () { e.target.style.removeProperty('--d'); }, 1600);
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: .12 });
+      marked.forEach(function (el) { io.observe(el); });
+      // no fim da página, o que estiver colado no rodapé nunca entra na área observada: revela tudo
+      var atEnd = function () {
+        if (innerHeight + scrollY < document.documentElement.scrollHeight - 4) return;
+        marked.forEach(function (el) { if (!el.classList.contains('in')) { el.classList.add('in'); io.unobserve(el); } });
+        removeEventListener('scroll', atEnd);
+      };
+      addEventListener('scroll', atEnd, { passive: true });
+    } else {
+      marked.forEach(function (el) { el.classList.add('in'); });
+    }
+
+    // "Mais de 30 anos": o número conta até 30 na abertura
+    document.querySelectorAll('.facts li').forEach(function (li) {
+      var m = li.textContent.match(/^(\D*)(\d+)(.*)$/);
+      if (!m) return;
+      var target = +m[2], t0 = null;
+      li.setAttribute('aria-label', li.textContent);
+      li.innerHTML = m[1] + '<span aria-hidden="true" style="font-variant-numeric:tabular-nums">0</span>' + m[3];
+      var span = li.querySelector('span');
+      setTimeout(function () {
+        requestAnimationFrame(function step(t) {
+          if (t0 === null) t0 = t;
+          var k = Math.min((t - t0) / 1400, 1), ease = 1 - Math.pow(1 - k, 3);
+          span.textContent = Math.round(target * ease);
+          if (k < 1) requestAnimationFrame(step);
+        });
+      }, 900);
+    });
   }
 
   var y = document.getElementById('ano'); if (y) y.textContent = new Date().getFullYear();
